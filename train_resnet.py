@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import Model, Sequential
-from tensorflow.keras.layers import Input, Dense, Flatten, Dropout, AveragePooling2D, Conv2D, MaxPool2D, BatchNormalization, InputLayer
+from tensorflow.keras.layers import Input, Dense, Flatten, Dropout, GlobalAveragePooling2D
 from tensorflow.keras.applications import ResNet50
 from tensorflow.keras.optimizers import SGD, RMSprop
 from sklearn.preprocessing import LabelBinarizer
@@ -82,11 +82,12 @@ baseModel = ResNet50(weights="imagenet",
                      input_tensor=Input(shape=(IMG_SIZE, IMG_SIZE, 3)))
 
 headModel = baseModel.output
-headModel = AveragePooling2D(pool_size=(7, 7))(headModel)
+headModel = GlobalAveragePooling2D()(headModel)
 headModel = Flatten(name="flatten")(headModel)
 headModel = Dense(512, activation="relu")(headModel)
-headModel = Dense(512, activation="relu")(headModel)
 headModel = Dropout(0.5)(headModel)
+headModel = Dense(512, activation="relu")(headModel)
+headModel = Dense(32, activation="relu")(headModel)
 headModel = Dense(len(lb.classes_), activation="softmax")(headModel)
 
 # headModel = baseModel.output
@@ -120,7 +121,7 @@ model.compile(loss="categorical_crossentropy",
               optimizer=opt)
 
 # train the head of the network
-H = model.fit_generator(trainAug.flow(trainX, trainY, batch_size=BATCH_SIZE),
+H = model.fit_generator(trainAug.flow(trainX, trainY, batch_size=BATCH_SIZE, shuffle=True),
                         steps_per_epoch=len(trainX) // BATCH_SIZE,
                         validation_data=validAug.flow(testX, testY),
                         validation_steps=len(testX) // BATCH_SIZE,
@@ -149,8 +150,8 @@ print(classification_report(testY.argmax(axis=1),
 
 # save model to disk
 print("[INFO] saving model...")
-model.save("violence.model")
+model.save("violence_resnet.model")
 
-f = open("lb.pickle", "wb")
+f = open("lb_resnet.pickle", "wb")
 f.write(pickle.dumps(lb))
 f.close()
