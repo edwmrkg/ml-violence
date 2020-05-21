@@ -17,7 +17,7 @@ from sklearn.metrics import classification_report
 
 TRAIN_DIR = 'train/'
 BATCH_SIZE = 32
-EPOCHS = 50
+EPOCHS = 25
 IMG_SIZE = 224
 LABELS = ['cold-arms', 'fight', 'fire', 'firearms', 'gore', 'non-violence']
 
@@ -32,7 +32,7 @@ for label in LABELS:
     for item in listDir:
         trainImagesPath.append(TRAIN_DIR + label + "/" + item)
 
-print(trainImagesPath)
+# print(trainImagesPath)
 with tqdm(total=len(trainImagesPath)) as pbar:
     for path in trainImagesPath:
         pbar.update(1)
@@ -84,28 +84,13 @@ baseModel = ResNet50(weights="imagenet",
 headModel = baseModel.output
 headModel = GlobalAveragePooling2D()(headModel)
 headModel = Flatten(name="flatten")(headModel)
+headModel = Dense(1024, activation="relu")(headModel)
+headModel = Dropout(0.25)(headModel)
 headModel = Dense(512, activation="relu")(headModel)
 headModel = Dropout(0.5)(headModel)
 headModel = Dense(512, activation="relu")(headModel)
 headModel = Dense(32, activation="relu")(headModel)
 headModel = Dense(len(lb.classes_), activation="softmax")(headModel)
-
-# headModel = baseModel.output
-# headModel = InputLayer(input_shape=(IMG_SIZE, IMG_SIZE, 3))
-# headModel = Conv2D(25, (5, 5), activation="relu", strides=(1, 1), padding="same")(headModel)
-# headModel = MaxPool2D(pool_size=(2, 2), padding='valid')(headModel)
-# headModel = Conv2D(50, (5, 5), activation="relu", strides=(2, 2), padding="same")(headModel)
-# headModel = MaxPool2D(pool_size=(2, 2), padding='valid')(headModel)
-# headModel = BatchNormalization()(headModel)
-# headModel = Conv2D(70, (3, 3), activation="relu", strides=(2, 2), padding="same")(headModel)
-# headModel = MaxPool2D(pool_size=(2, 2), padding='valid')(headModel)
-# headModel = BatchNormalization()(headModel)
-#
-# headModel = Flatten(name="flatten")(headModel)
-# headModel = Dense(100, activation="relu")(headModel)
-# headModel = Dense(100, activation="relu")(headModel)
-# headModel = Dropout(0.25)(headModel)
-# headModel = Dense(len(lb.classes_), activation="softmax")(headModel)
 
 model = Model(inputs=baseModel.input, outputs=headModel)
 
@@ -115,7 +100,7 @@ for layer in baseModel.layers:
 # compile the model
 print("[INFO] compiling model...")
 # opt = SGD(lr=1e-4, momentum=0.6, decay=1e-4 / EPOCHS)
-opt = RMSprop(lr=1e-5)
+opt = RMSprop(lr=1e-4)
 model.compile(loss="categorical_crossentropy",
               metrics=["accuracy"],
               optimizer=opt)
@@ -123,7 +108,7 @@ model.compile(loss="categorical_crossentropy",
 # train the head of the network
 H = model.fit_generator(trainAug.flow(trainX, trainY, batch_size=BATCH_SIZE, shuffle=True),
                         steps_per_epoch=len(trainX) // BATCH_SIZE,
-                        validation_data=validAug.flow(testX, testY),
+                        validation_data=validAug.flow(testX, testY, shuffle=True),
                         validation_steps=len(testX) // BATCH_SIZE,
                         epochs=EPOCHS)
 
@@ -134,20 +119,6 @@ print(classification_report(testY.argmax(axis=1),
                             predictions.argmax(axis=1),
                             target_names=lb.classes_))
 
-# plot the training loss and accuracy
-# N = EPOCHS
-# plt.style.use("ggplot")
-# plt.figure()
-# plt.plot(np.arange(0, N), H.history["loss"], label="train_loss")
-# plt.plot(np.arange(0, N), H.history["val_loss"], label="val_loss")
-# plt.plot(np.arange(0, N), H.history["acc"], label="train_acc")
-# plt.plot(np.arange(0, N), H.history["val_acc"], label="val_acc")
-# plt.title("Training Loss and Accuracy on Dataset")
-# plt.xlabel("Epoch #")
-# plt.ylabel("Loss/Accuracy")
-# plt.legend(loc="lower left")
-# plt.savefig("plot.png")
-
 # save model to disk
 print("[INFO] saving model...")
 model.save("violence_resnet.model")
@@ -155,3 +126,17 @@ model.save("violence_resnet.model")
 f = open("lb_resnet.pickle", "wb")
 f.write(pickle.dumps(lb))
 f.close()
+
+# plot the training loss and accuracy
+N = EPOCHS
+plt.style.use("ggplot")
+plt.figure()
+plt.plot(np.arange(0, N), H.history["loss"], label="train_loss")
+plt.plot(np.arange(0, N), H.history["val_loss"], label="val_loss")
+plt.plot(np.arange(0, N), H.history["acc"], label="train_acc")
+plt.plot(np.arange(0, N), H.history["val_acc"], label="val_acc")
+plt.title("Training Loss and Accuracy on Dataset")
+plt.xlabel("Epoch #")
+plt.ylabel("Loss/Accuracy")
+plt.legend(loc="lower left")
+plt.savefig("plot.png")

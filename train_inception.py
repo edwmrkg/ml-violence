@@ -33,7 +33,7 @@ for label in LABELS:
     for item in listDir:
         trainImagesPath.append(TRAIN_DIR + label + "/" + item)
 
-print(trainImagesPath)
+# print(trainImagesPath)
 with tqdm(total=len(trainImagesPath)) as pbar:
     for path in trainImagesPath:
         pbar.update(1)
@@ -84,10 +84,10 @@ baseModel = InceptionV3(weights="imagenet",
 
 headModel = baseModel.output
 headModel = GlobalAveragePooling2D()(headModel)
-# headModel = Flatten(name="flatten")(headModel)
-headModel = Dense(1024, kernel_regularizer=regularizers.l2(0.01), activity_regularizer=regularizers.l1(0.01))(headModel)
+headModel = Flatten(name="flatten")(headModel)
 headModel = Dense(512, activation="relu")(headModel)
 headModel = Dropout(0.5)(headModel)
+headModel = Dense(512, activation="relu")(headModel)
 headModel = Dense(32, activation="relu")(headModel)
 headModel = Dense(len(lb.classes_), activation="softmax")(headModel)
 

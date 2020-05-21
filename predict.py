@@ -6,16 +6,16 @@ import numpy as np
 from tensorflow.keras.models import load_model
 
 ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--input", required=True, help="path to input image")
 ap.add_argument("-l", "--label_bin", default="lb.pickle", help="path to label binarizer")
 ap.add_argument("-m", "--model", default="violence.model", help="Path to model")
 ap.add_argument("-s", "--size", default=299, help="Image size")
+ap.add_argument("-i", "--input", required=True, help="path to input image")
 args = vars(ap.parse_args())
 
 model = load_model(args["model"])
 lb = pickle.loads(open(args["label_bin"], "rb").read())
 mean = np.array([123.68, 116.779, 103.939][::1], dtype="float32")
-IMAGE_SIZE = args["size"]
+IMAGE_SIZE = int(args["size"])
 
 image = cv2.imread(args["input"])
 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
